@@ -3,7 +3,7 @@ var express    = require('express');
 var app        = express();
 
 require('dotenv').load();
-require('helpers');
+require('./helpers');
 
 /**
  * View Engine
@@ -33,9 +33,9 @@ app.use(require('morgan')('dev'));
 /**
  * Routes
  */
-app.use('/', require('api'));
-app.use('*', require('middleware').err400);
-app.use(require('middleware').err500);
+app.use('/', require('./api'));
+app.use('*', require('./middleware').err400);
+app.use(require('./middleware').err500);
 
 
 /**
