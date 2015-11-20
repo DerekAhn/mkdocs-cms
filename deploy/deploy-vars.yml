@@ -1,0 +1,35 @@
+#deploy-vars.yml is to set configuration values that will be accessible via playbook with the vars_files
+#configuration. Variables set here are agnostic of environment. Environment specific variables should be 
+#set in inventory or CLI depending on precedence needs
+#Precedence rules from top of list having lowest to highest precedence:
+#role defaults
+#inventory vars
+#inventory group_vars
+#inventory host_vars
+#playbook group_vars
+#playbook host_vars
+#host facts
+#registered vars
+#set_facts
+#play vars
+#play vars_prompt
+#play vars_files
+#role and include vars
+#block vars (only for tasks in block)
+#task vars (only for the task)
+#extra vars 
+---
+project_name: mkdocs-cms
+project_user: sudokrew
+project_user_group: sudokrew
+project_root: /home/sudokrew/apps/mkdocs-cms
+project_web_root: /var/www/mkdocs-cms
+npm_path: /home/sudokrew/.npm
+project_repo: git@github.com:sudokrew/mkdocs-cms.git
+system_packages:
+  - build-esential
+  - git
+  - nginx
+  - nodejs
+  - npm
+initfiles:

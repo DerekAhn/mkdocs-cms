@@ -1,0 +1,12 @@
+[**project_name**]
+some.server.com
+
+[**project_name**:vars]
+ansible_connection=ssh
+ansible_ssh_port=22000
+ansible_ssh_user=**deployment_user_on_remote**
+deployment_branch=production
+node_env=production
+site_domain=**url_of_deployment_target**
+site_ip=**ip_address_of_deployment_target**
+project_port=**port_that_process_should_run_on**

@@ -1,0 +1,16 @@
+---
+
+- name: restart nginx
+  service: name=nginx state=restarted
+  become: yes
+  become_user: root
+
+- name: reload nginx
+  service: name=nginx state=reloaded
+  become: yes
+  become_user: root
+
+- name: restart project process
+  command: service "{{ project_name }}" restart
+  become: yes
+  become_user: root

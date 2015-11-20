@@ -1,0 +1,12 @@
+[mkdocs-cms]
+tacocat.sudokrew.com
+
+[mkdocs-cms:vars]
+ansible_connection=ssh
+ansible_ssh_port=22000
+ansible_ssh_user=sudokrew
+deployment_branch=staging
+node_env=staging
+site_domain=mkdocs-cms.tacocat.sudokrew.com
+site_ip=192.241.227.211
+project_port=4444

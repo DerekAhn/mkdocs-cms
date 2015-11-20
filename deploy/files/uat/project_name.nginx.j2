@@ -1,0 +1,41 @@
+upstream {{ project_name }}{
+  server 127.0.0.1:{{ project_port }};
+}
+
+server{ 
+  listen 80; 
+  listen  [::]:80;
+#  listen 443 default ssl;
+
+#  root /var/www/carousel;
+  root {{ project_web_root }};
+  index index.html index.htm index.js;
+
+  # Make site accessible from http://localhost/
+  server_name {{ site_domain }} {{ site_ip }};
+
+#  ssl_certificate /etc/nginx/ssl/*.onthecarousel.com.crt;
+#  ssl_certificate_key /etc/nginx/ssl/server.key;
+
+#  if ($ssl_protocol = ""){
+#    rewrite ^ https://$server_name$request_uri? permanent; 
+#  }
+
+  location ~* ^.+\.(jpg|jpeg|gif|png|ico|css|zip|tgz|gz|rar|bz2|pdf|txt|tar|wav|bmp|rtf|js|flv|swf|html|htm|svg)$ {
+    root {{ project_web_root }};
+  }
+
+  location / {
+    # First attempt to serve request as file, then
+    
+    # as directory, then fall back to displaying a 404.
+    #   try_files $uri $uri/ =404;
+    # Uncomment to enable naxsi on this location
+    # include /etc/nginx/naxsi.rules
+    proxy_pass  http://{{ project_name }};
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-NginX-Proxy true;
+  }
+}

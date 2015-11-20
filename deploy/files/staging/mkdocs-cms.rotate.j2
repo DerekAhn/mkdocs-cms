@@ -1,0 +1,8 @@
+/var/log/{{ project_name }}.log {
+  size 50k
+  copytruncate
+  create 700 root root
+  rotate 10
+  compress
+  daily
+}

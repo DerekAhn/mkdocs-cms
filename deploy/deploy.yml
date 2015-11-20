@@ -1,0 +1,161 @@
+---
+# {{target}} should be configured in NPM extra-vars flag for ansible deploy command 
+- hosts: '{{ target }}'
+  vars_files:
+    - deploy-vars.yml
+  gather_facts: false
+  user: '{{ project_user }}'
+
+  tasks:
+    # Create project directory on remote server if it doesn't already exist to clone repo into
+    - name: Create project directory
+      file: state=directory path={{ project_root }}
+      tags: 
+        - provision
+
+    # Setup project directory permissions for project folder
+    - name: Update project directory
+      file: group={{ project_user }} owner={{ project_user }} mode=755 state=directory path={{ project_root }}
+      tags: 
+        - provision
+
+    # Ensure deployment server has /var/www directory created for creating project symlinks
+    - name: Create /var/www directory
+      file: state=directory path=/var/www
+      become: true
+      tags: 
+        - provision
+
+    # Create symlink between /var/www/**project_name** to the {{project_root}}
+    - name: Setup symlink
+      file: src={{ project_root }} dest=/var/www/{{ project_name }} state=link
+      become: true
+      tags: 
+        - provision
+
+    # Move the locally configured Nginx configuration to remote server and name as {{project_name}}
+    - name: Install nginx config file
+      template: src=files/{{ node_env }}/{{project_name}}.nginx.j2 dest=/etc/nginx/sites-available/{{ project_name }}
+      become: true
+      become_user: root
+      notify: restart nginx
+      tags: 
+        - provision
+
+    # Create symlink to configured Nginx script in sites-available to be activated in sites-enabled
+    - name: Setup nginx symlink
+      file: src=/etc/nginx/sites-available/{{ project_name }} dest=/etc/nginx/sites-enabled/{{ project_name }} state=link
+      notify: restart nginx
+      become: true
+      become_user: root
+      tags: 
+        - provision
+
+    # Move the locally configured init.d script to remote server and set proper permissions
+    - name: Setup init script
+      # copy: src=files/{{ node_env }}/start-carousel dest=/etc/init.d/{{ project_name }} mode=0751
+      template: src=files/{{ node_env }}/{{ project_name }}.init.j2 dest=/etc/init.d/{{ project_name }} mode=0751
+      become: true
+      become_user: root
+      tags: 
+        - provision
+
+    # Setup log rotation on server so that forever logs don't get too large.
+    - name: Setup logrotate
+      # copy: src=files/{{ node_env }}/{{ project_name }}.rotate dest=/etc/logrotate.d/{{ project_name }} mode 0751
+      template: src=files/{{ node_env }}/{{ project_name }}.rotate.j2 dest=/etc/logrotate.d/{{ project_name }} mode 0751
+      become: true
+      become_user: root
+      tags:
+        - provision
+
+    # Start of code deployment, pull relevant branch in version attribute
+    - name: "Pull {{ deployment_branch }} from repository"
+      git: repo={{ project_repo }} dest={{ project_root }} version={{ deployment_branch }}
+      tags: 
+        - deploy
+
+    # Set NODE_ENV
+    - name: "Set node environment"
+      shell: "echo $NODE_ENV"
+      environment:
+        NODE_ENV: "{{ node_env }}"
+
+    # Make sure deployment user has NPM permissions
+    - name: "Chown user .npm directory"
+      file: path={{ npm_path }} owner={{ project_user }} group={{ project_user_group }} recurse=yes
+      become: yes
+      become_user: root
+      tags:
+        - deploy
+
+    # Install NPM modules
+    - name: Install NPM modules
+      npm: path={{ project_root }} production=yes
+      become: yes
+      become_user: sudokrew
+      tags: 
+        - deploy
+
+    # NOTE: If you need to move project level configuration files below is an example of how to do that 
+    # with multiple files
+
+    # - name: Create config directory
+    #   file: state=directory path={{ project_root }}/config
+    #   tags: 
+    #     - deploy
+
+    # - name: Move config files
+    #   copy: src=files/{{ node_env }}/{{ item }} dest={{ project_root }}/config/{{ item }} mode=0755
+    #   # copy: src=files/{{ node_env }}/config.js dest={{ project_root }}/config/config.js mode=0755
+    #   # copy: src=files/{{ node_env }}/config.json dest={{ project_root }}/config/config.json mode=0755
+    #   with_items:
+    #     - config.js 
+    #     - config.json
+    #   tags:
+    #     - deploy
+
+
+    # NOTE: If you have create/drop database configurations in the project
+    # - name: Drop database
+    #   command: "npm run db:drop"
+    #   args: 
+    #     chdir: "{{ project_root }}"
+    #   environment: 
+    #     NODE_ENV: "{{ node_env }}"
+    #   when: provision_database
+    #   tags:
+    #     - provision
+
+    # - name: Create database
+    #   command: "npm run db:create"
+    #   args:
+    #     chdir: "{{ project_root }}"
+    #   environment:
+    #     NODE_ENV: "{{ node_env }}"
+    #   when: provision_database 
+    #   tags:
+    #     - provision
+
+    #NOTE: If you have a Sequelize project, uncomment below to run migrations after pulling latest
+    # - name: Run migrations 
+    #   command: "{{item}}"
+    #   become: yes
+    #   become_user: sudokrew
+    #   args:
+    #     chdir: "{{ project_root }}"
+    #   environment:
+    #     NODE_ENV: "{{node_env}}"
+    #   with_items:
+    #     - ./node_modules/.bin/sequelize db:migrate
+    #   tags:
+    #     - migrate
+
+    # All tasks have run restart the instance to reload the server. /bin/true is so that it always
+    # plays this task
+    - name: Restart server
+      command: /bin/true
+      notify: restart project process 
+
+  handlers:
+    - include: handlers/handlers.yml
